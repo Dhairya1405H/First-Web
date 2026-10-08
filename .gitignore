@@ -19,4 +19,5 @@ yarn-error.log*
 # Editor & workspace
 .vscode/
 .antigravity-ide.code-workspace
+extensions/
 *.sw?
