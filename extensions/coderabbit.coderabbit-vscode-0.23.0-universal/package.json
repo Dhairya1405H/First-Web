@@ -1,0 +1,404 @@
+{
+	"name": "coderabbit-vscode",
+	"displayName": "CodeRabbit",
+	"version": "0.23.0",
+	"description": "Free AI code reviews that run directly in VS Code. Review each commit immediately without waiting for PR to be raised. Catch more bugs and ship code faster.",
+	"categories": [
+		"AI",
+		"Machine Learning",
+		"Other",
+		"Programming Languages"
+	],
+	"keywords": [
+		"ai assistant",
+		"bug detection",
+		"code quality",
+		"code rabbit",
+		"code review",
+		"coderabbit",
+		"productivity",
+		"pull request",
+		"static analysis"
+	],
+	"homepage": "https://coderabbit.ai",
+	"license": "See LICENSE",
+	"repository": "https://github.com/coderabbitai/vscode-extension",
+	"publisher": "coderabbit",
+	"main": "./dist/extension.js",
+	"scripts": {
+		"build": "npm-run-all build:extension",
+		"build:extension": "npm-run-all compile:extension",
+		"build:webview": "cd webview && pnpm run build",
+		"check-types": "tsc --noEmit",
+		"check:no-leak": "node scripts/check-no-source-leak.mjs",
+		"clean": "rm -rf .turbo dist docs node_modules tsconfig.tsbuildinfo",
+		"compile": "npm-run-all check-types compile:extension compile:webview",
+		"compile-tests": "tsc -p . --outDir out",
+		"compile:extension": "pnpm check-types && node esbuild.js",
+		"compile:webview": "cd webview && pnpm run build",
+		"format": "pnpm --dir .. exec oxfmt --config .oxfmtrc.json vscode-extension",
+		"format:check": "pnpm --dir .. exec oxfmt --config .oxfmtrc.json --check vscode-extension",
+		"lint": "pnpm --dir .. exec oxlint --config .oxlintrc.json --ignore-pattern vscode-extension/webview/ vscode-extension && pnpm run format:check",
+		"lint:fix": "pnpm --dir .. exec oxlint --config .oxlintrc.json --ignore-pattern vscode-extension/webview/ --fix vscode-extension --quiet && pnpm run format",
+		"package": "vsce package --no-dependencies --allow-missing-repository",
+		"publish": "vsce publish --packagePath \"${VSIX_FILE:-$npm_config_vsix_file}\" --pat $VSCE_TOKEN",
+		"publish:ovsx": "ovsx publish --packagePath ${VSIX_FILE:-$npm_config_vsix_file} --pat $OVSX_PAT",
+		"test": "node ../scripts/vitest-with-turbo-results.mjs",
+		"test:watch": "vitest",
+		"typecheck": "tsc --build --noEmit",
+		"vscode:prepublish": "turbo run build --filter=coderabbit-vscode --filter=coderabbit-vscode-webview",
+		"vscode:uninstall": "node ./dist/lifecycle.js",
+		"watch": "npm-run-all -p watch:*",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"watch:esbuild": "node esbuild.js --watch",
+		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+		"watch:webview": "cd webview && pnpm run watch:build"
+	},
+	"dependencies": {
+		"@coderabbitai/common": "workspace:*",
+		"@coderabbitai/telemetry": "workspace:*",
+		"@trpc/client": "11.19.0",
+		"execa": "9.6.1",
+		"minimatch": "10.2.6",
+		"p-limit": "7.3.0",
+		"semver": "7.7.4",
+		"string-similarity": "4.0.4",
+		"uuid": "14.0.1",
+		"ws": "8.22.0",
+		"zod": "4.6.5"
+	},
+	"devDependencies": {
+		"@coderabbitai/coderabbit-handler": "workspace:*",
+		"@coderabbitai/entitlements": "workspace:*",
+		"@coderabbitai/pr-reviewer-saas": "workspace:*",
+		"@trpc/server": "11.19.0",
+		"@types/mocha": "10.0.10",
+		"@types/node": "22.20.4",
+		"@types/semver": "7.7.1",
+		"@types/string-similarity": "4.0.2",
+		"@types/vscode": "1.93.0",
+		"@types/ws": "8.18.1",
+		"@vscode/vsce": "3.9.2",
+		"esbuild": "0.28.2",
+		"npm-run-all2": "9.0.2",
+		"ovsx": "1.0.2",
+		"typescript": "7.0.2"
+	},
+	"contributes": {
+		"configuration": {
+			"title": "CodeRabbit",
+			"properties": {
+				"coderabbit.completionNotifications": {
+					"type": "boolean",
+					"default": false,
+					"scope": "application",
+					"description": "Request a macOS Notification Center status alert on local desktop sessions when a CodeRabbit review completes or fails. Successful reviews also show an IDE notification with Show Review. Other platforms and remote/web sessions use the IDE notification. macOS notification permissions and Focus settings control OS alert visibility."
+				},
+				"coderabbit.respectGitIgnore": {
+					"type": "boolean",
+					"default": true,
+					"scope": "resource",
+					"description": "Exclude ignored untracked files supplied by Git from local reviews. Tracked and staged files remain eligible even if they match ignore rules. Disabling this does not discover ignored files omitted by Git. Built-in file exclusions still apply."
+				},
+				"coderabbit.reviewCompletionSound": {
+					"type": "boolean",
+					"default": false,
+					"scope": "application",
+					"description": "Play a short sound when a review completes. Requires the CodeRabbit panel to have been opened in this window. Playback depends on your editor's audio permissions and system volume; blocked sounds are skipped."
+				},
+				"coderabbit.autoReviewMode": {
+					"type": "string",
+					"enum": [
+						"disabled",
+						"prompt",
+						"auto"
+					],
+					"enumDescriptions": [
+						"Don't prompt for review after commits",
+						"Prompt to start a review after commits (default)",
+						"Automatically start review after commits with 10 second cancel window"
+					],
+					"default": "prompt",
+					"description": "How to handle review after commits"
+				},
+				"coderabbit.agentType": {
+					"type": "string",
+					"enum": [
+						"Native",
+						"Claude Code",
+						"Claude Code Extension",
+						"Codex CLI",
+						"Clipboard",
+						"Cline",
+						"Roo",
+						"Kilo Code",
+						"Augment Code",
+						"opencode"
+					],
+					"enumDescriptions": [
+						"Use built-in AI agent (default). Falls back to Clipboard if not available.",
+						"Use Claude Code in terminal",
+						"Use Claude Code VSCode Extension (requires the Claude Code extension)",
+						"Use Codex CLI in terminal",
+						"Copy instructions to clipboard",
+						"Use Cline (requires the Cline extension)",
+						"Use Roo (requires the Roo Code extension)",
+						"Use Kilo Code (requires the Kilo Code extension)",
+						"Use Augment Code (requires the Augment Code extension)",
+						"Use opencode in terminal"
+					],
+					"default": "Native",
+					"description": "The AI agent to use for 'Fix with AI' functionality."
+				},
+				"coderabbit.accountRegion": {
+					"type": "string",
+					"enum": [
+						"us",
+						"eu"
+					],
+					"enumItemLabels": [
+						"US (default)",
+						"EU"
+					],
+					"markdownEnumDescriptions": [
+						"For accounts using [app.coderabbit.ai](https://app.coderabbit.ai).",
+						"For accounts using [app.eu.coderabbit.ai](https://app.eu.coderabbit.ai)."
+					],
+					"default": "us",
+					"description": "Choose the region where your CodeRabbit account is hosted. Match the website you use to sign in. Changing this setting connects the extension to that region; it does not move your account."
+				},
+				"coderabbit.region": {
+					"type": "string",
+					"enum": [
+						"us",
+						"eu"
+					],
+					"default": "us",
+					"markdownDeprecationMessage": "Use `#coderabbit.accountRegion#` instead. Your saved region still applies until you set Account region."
+				},
+				"coderabbit.autoStartTask": {
+					"type": "boolean",
+					"default": true,
+					"description": "Automatically start task for supported AI agents. When disabled, requires manual confirmation to begin."
+				},
+				"coderabbit.selfHostedUrl": {
+					"type": "string",
+					"scope": "application",
+					"description": "URL of your self-hosted CodeRabbit server (e.g., https://coderabbit.yourcompany.com). When configured, the extension will connect directly to your server bypassing authentication."
+				}
+			}
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "coderabbit-vscode-sidebar-view",
+					"title": "CodeRabbit",
+					"icon": "resources/coderabbit.svg"
+				}
+			]
+		},
+		"views": {
+			"coderabbit-vscode-sidebar-view": [
+				{
+					"type": "webview",
+					"id": "coderabbit-vscode-sidebar",
+					"name": "CodeRabbit",
+					"icon": "resources/coderabbit.svg"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "coderabbit-vscode.initiateReview",
+				"title": "Start Review",
+				"category": "CodeRabbit"
+			},
+			{
+				"command": "coderabbit-vscode.logout",
+				"title": "Logout",
+				"category": "CodeRabbit",
+				"icon": "$(sign-out)"
+			},
+			{
+				"command": "coderabbit-vscode.applySuggestion",
+				"title": "Apply suggested change",
+				"category": "CodeRabbit",
+				"icon": "$(check)"
+			},
+			{
+				"command": "coderabbit-vscode.applyDiff",
+				"title": "Apply suggested diff",
+				"category": "CodeRabbit"
+			},
+			{
+				"command": "coderabbit-vscode.changeOrganization",
+				"title": "Change Organization",
+				"category": "CodeRabbit"
+			},
+			{
+				"command": "coderabbit-vscode.cleanupReviews",
+				"title": "Cleanup previous reviews",
+				"category": "CodeRabbit",
+				"icon": "$(trash)"
+			},
+			{
+				"command": "coderabbit-vscode.handoffToAgent",
+				"title": "Fix with AI",
+				"category": "CodeRabbit",
+				"icon": "$(sparkle)"
+			},
+			{
+				"command": "coderabbit-vscode.expandAllComments",
+				"title": "Expand all",
+				"category": "CodeRabbit"
+			},
+			{
+				"command": "coderabbit-vscode.collapseAllComments",
+				"title": "Collapse all",
+				"category": "CodeRabbit",
+				"icon": "$(collapse-all)"
+			},
+			{
+				"command": "coderabbit-vscode.resolveComment",
+				"title": "Ignore",
+				"category": "CodeRabbit",
+				"icon": "$(circle-slash)"
+			},
+			{
+				"command": "coderabbit-vscode.showSettings",
+				"title": "Settings",
+				"category": "CodeRabbit",
+				"icon": "$(settings-gear)"
+			},
+			{
+				"command": "coderabbit-vscode.submitFeedback",
+				"title": "Provide feedback",
+				"category": "CodeRabbit",
+				"icon": "$(flag)"
+			},
+			{
+				"command": "coderabbit-vscode.giveFeedback",
+				"title": "Give feedback",
+				"category": "CodeRabbit",
+				"icon": "$(feedback)"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "coderabbit-vscode.logout",
+					"when": "view == coderabbit-vscode-sidebar && coderabbit-vscode.isLoggedIn",
+					"group": "navigation@2"
+				},
+				{
+					"command": "coderabbit-vscode.showSettings",
+					"when": "view == coderabbit-vscode-sidebar",
+					"group": "navigation@1"
+				},
+				{
+					"command": "coderabbit-vscode.giveFeedback",
+					"when": "view == coderabbit-vscode-sidebar && coderabbit-vscode.isLoggedIn && coderabbit-vscode.surveysEnabled",
+					"group": "navigation@0"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "coderabbit-vscode.applyDiff",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.applySuggestion",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.resolveComment",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.handoffToAgent",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.submitFeedback",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.giveFeedback",
+					"when": "coderabbit-vscode.isLoggedIn && coderabbit-vscode.surveysEnabled"
+				},
+				{
+					"command": "coderabbit-vscode.logout",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.initiateReview",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.changeOrganization",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.expandAllComments",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.collapseAllComments",
+					"when": "coderabbit-vscode.isLoggedIn"
+				}
+			],
+			"comments/commentThread/title": [
+				{
+					"command": "coderabbit-vscode.applySuggestion",
+					"group": "inline@1",
+					"when": "commentController =~ /^coderabbit/ && commentThread =~ /hasSuggestion/"
+				},
+				{
+					"command": "coderabbit-vscode.resolveComment",
+					"group": "inline@2",
+					"when": "commentController =~ /^coderabbit/"
+				},
+				{
+					"command": "coderabbit-vscode.handoffToAgent",
+					"group": "inline@3",
+					"when": "commentController =~ /^coderabbit/ && commentThread =~ /hasCodegenInstructions/"
+				},
+				{
+					"command": "coderabbit-vscode.collapseAllComments",
+					"group": "inline@4",
+					"when": "commentController =~ /^coderabbit/"
+				},
+				{
+					"command": "coderabbit-vscode.submitFeedback",
+					"group": "inline@5",
+					"when": "commentController =~ /^coderabbit/ && !(commentThread =~ /feedbackSubmitted/) && !(commentThread =~ /selfHosted/)"
+				}
+			]
+		}
+	},
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"extensionDependencies": [
+		"vscode.git"
+	],
+	"icon": "resources/coderabbit.png",
+	"engines": {
+		"vscode": "^1.93.1"
+	},
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": "limited",
+			"description": "Functionality is restricted in untrusted workspaces; workspace-provided self-hosted URLs and Fix with AI handoff policy settings are ignored, so the extension uses user-level policies and the default SaaS configuration.",
+			"restrictedConfigurations": [
+				"coderabbit.agentType",
+				"coderabbit.autoStartTask"
+			]
+		}
+	},
+	"__metadata": {
+		"installedTimestamp": 1791402686416,
+		"targetPlatform": "universal",
+		"size": 2569322
+	}
+}

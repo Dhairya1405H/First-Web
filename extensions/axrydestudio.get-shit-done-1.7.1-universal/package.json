@@ -1,0 +1,229 @@
+{
+	"name": "get-shit-done",
+	"displayName": "Get Shit Done",
+	"description": "GSD Mission Control — install and run the Get Shit Done workflow pack (v1.6.0) for Antigravity, Cursor, Windsurf, and VS Code.",
+	"version": "1.7.1",
+	"publisher": "AxrydeStudio",
+	"author": {
+		"name": "Godrikt",
+		"organization": "AxrydeStudio"
+	},
+	"engines": {
+		"vscode": "^1.85.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"gsd",
+		"antigravity",
+		"workflow",
+		"ai",
+		"productivity",
+		"subagents",
+		"context-engineering"
+	],
+	"license": "MIT",
+	"funding": {
+		"type": "other",
+		"url": "https://www.chai4.me/godrikt"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/toonight/get-shit-done-for-antigravity"
+	},
+	"icon": "assets/icon.png",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "gsd.initProject",
+				"title": "GSD: Initialize Project",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.setupWizard",
+				"title": "GSD: First-Run Setup Wizard",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.whatNext",
+				"title": "GSD: What's Next?",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.doctor",
+				"title": "GSD: Doctor (Health & Diagnostics)",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.install",
+				"title": "GSD: Install or Update Workflows",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.newProject",
+				"title": "GSD: New Project",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.map",
+				"title": "GSD: Map Codebase",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.discussPhase",
+				"title": "GSD: Discuss Phase",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.researchPhase",
+				"title": "GSD: Research Phase",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.plan",
+				"title": "GSD: Plan Phase",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.execute",
+				"title": "GSD: Execute Phase",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.verify",
+				"title": "GSD: Verify Phase",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.debug",
+				"title": "GSD: Debug Issue",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.progress",
+				"title": "GSD: Show Progress",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.pause",
+				"title": "GSD: Pause Session",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.resume",
+				"title": "GSD: Resume Session",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.sprint",
+				"title": "GSD: Quick Sprint",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.completeMilestone",
+				"title": "GSD: Complete Milestone",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.newMilestone",
+				"title": "GSD: New Milestone",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.auditMilestone",
+				"title": "GSD: Audit Milestone",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.addPhase",
+				"title": "GSD: Add Phase",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.addTodo",
+				"title": "GSD: Add Todo",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.checkTodos",
+				"title": "GSD: Check Todos",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.openArtifact",
+				"title": "GSD: Open Artifact File",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.help",
+				"title": "GSD: Open Help",
+				"category": "GSD"
+			},
+			{
+				"command": "gsd.refresh",
+				"title": "GSD: Refresh Panel",
+				"icon": "$(refresh)",
+				"category": "GSD"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "gsdContainer",
+					"title": "GSD Mission Control",
+					"icon": "assets/icon-activity.svg"
+				}
+			]
+		},
+		"views": {
+			"gsdContainer": [
+				{
+					"type": "webview",
+					"id": "gsd.missionControl",
+					"name": "Mission Control"
+				}
+			]
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "gsd.refresh",
+					"when": "view == gsd.missionControl",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile",
+		"test": "node ./out/test/runTests.js",
+		"lint": "eslint src --ext ts",
+		"package": "vsce package"
+	},
+	"devDependencies": {
+		"@types/mocha": "^10.0.6",
+		"@types/node": "^20.11.0",
+		"@types/vscode": "^1.85.0",
+		"@typescript-eslint/eslint-plugin": "^6.19.0",
+		"@typescript-eslint/parser": "^6.19.0",
+		"@vscode/test-electron": "^2.3.8",
+		"eslint": "^8.56.0",
+		"glob": "^10.3.10",
+		"mocha": "^10.2.0",
+		"typescript": "^5.3.3",
+		"@vscode/vsce": "^2.24.0"
+	},
+	"__metadata": {
+		"installedTimestamp": 1791402753233,
+		"targetPlatform": "universal",
+		"size": 554356
+	}
+}
